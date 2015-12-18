@@ -1,0 +1,24 @@
+{
+    "name": "chazer/json-stream-reader",
+    "type": "library",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Aleksandr Chazov",
+            "email": "develop@chazer.ru"
+        }
+    ],
+    "minimum-stability": "stable",
+    "require": {
+        "salsify/json-streaming-parser": "^4.0",
+        "psr/http-message": "^1.0"
+    },
+    "require-dev": {
+        "guzzlehttp/psr7": "^1.2"
+    },
+    "autoload": {
+        "psr-0": {
+            "JsonStreamReader\\": "src/"
+        }
+    }
+}
