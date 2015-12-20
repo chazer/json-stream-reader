@@ -25,6 +25,13 @@ class StreamReader implements JsonStreamingParser_Listener
 
     private $cbOnComplete;
 
+    private $noStoreLevel;
+
+    const NO_STORE = 0b0001;
+    const SKIP_KEY = 0b0010;
+    const ALL_KEYS = 0b0100;
+    const SKIP_DOC = 0b0110;
+
     public function start_document()
     {
         $this->_stack = array();
@@ -71,7 +78,8 @@ class StreamReader implements JsonStreamingParser_Listener
 
     public function value($value)
     {
-        $this->insertValue($value);
+        $store = $this->onValue($value);
+        $this->insertValue($value, $store);
     }
 
     private function startComplexValue($type)
@@ -86,10 +94,7 @@ class StreamReader implements JsonStreamingParser_Listener
         if (empty($this->_stack)) {
             $this->_result = $obj['value'];
         } else {
-            $store = true;
-            if ($this->listenersCount > 0) {
-                $this->dispatchValue($obj['value'], $store);
-            }
+            $store = $this->onValue($obj['value']);
             $this->insertValue($obj['value'], $store);
         }
     }
@@ -143,8 +148,16 @@ class StreamReader implements JsonStreamingParser_Listener
     {
         if (isset($this->activeListeners[$this->_level])) {
             foreach ($this->activeListeners[$this->_level] as &$l) {
-                if (false === call_user_func($l['callback'], $this->_keys, $value)) {
-                    $this->stopListener($l);
+                $f = call_user_func($l['callback'], $this->_keys, $value);
+                if ($f & self::NO_STORE) {
+                    $this->noStoreLevel = $this->_level;
+                }
+                if ($f & self::SKIP_KEY) {
+                    if ($f & self::ALL_KEYS) {
+                        $this->stopListener($l);
+                    } else {
+                        $this->disableListener($l['index']);
+                    }
                 }
             }
         }
@@ -221,6 +234,10 @@ class StreamReader implements JsonStreamingParser_Listener
 
     protected function onCloseKey($level, $key)
     {
+        if(isset($this->noStoreLevel) && $this->noStoreLevel > $level) {
+            $this->noStoreLevel = null;
+        }
+
         $keys = array_unique(['*', $key]);
         foreach ($keys as $key) {
             if (!isset($this->listenersByKey[$level][$key])) {
@@ -238,6 +255,19 @@ class StreamReader implements JsonStreamingParser_Listener
                 }
             }
         }
+    }
+
+    protected function onValue($value)
+    {
+        $store = false;
+        if ($this->listenersCount > 0) {
+            $store = true;
+            $this->dispatchValue($value);
+        }
+        if (isset($this->noStoreLevel) && $this->noStoreLevel === $this->_level) {
+            $store = false;
+        }
+        return $store;
     }
 
     /**
