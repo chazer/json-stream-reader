@@ -14,11 +14,12 @@
         "psr/http-message": "^1.0"
     },
     "require-dev": {
-        "guzzlehttp/psr7": "^1.2"
+        "guzzlehttp/psr7": "^1.2",
+        "phpunit/phpunit": "^4.8"
     },
     "autoload": {
         "psr-0": {
-            "JsonStreamReader\\": "src/"
+            "JsonStreamReader\\": ["src/", "tests/"]
         }
     }
 }
